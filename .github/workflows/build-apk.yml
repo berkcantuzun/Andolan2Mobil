@@ -1,0 +1,82 @@
+name: Andolan2 APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      # Taban: Winlator Cmod (GPL-3.0), cmod_bionic dali, sabit commit
+      BASE_REPO: https://github.com/coffincolors/winlator.git
+      BASE_COMMIT: 49bfb90fce932107cf6a7c1af62f910e7a1a2bfd
+      # Wine/imagefs gibi buyuk dosyalar (Git LFS) bu APK'nin icinden alinir
+      BASE_APK_URL: https://github.com/coffincolors/winlator/releases/download/cmod_v13.1/Winlator-Cmod-v13.1.1.apk
+    steps:
+      - name: Disk alani ac
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Andolan2 dosyalarini al
+        uses: actions/checkout@v4
+        with:
+          path: andolan2
+
+      - name: Winlator Cmod kaynagini al
+        run: |
+          git init -q winlator && cd winlator
+          git remote add origin "$BASE_REPO"
+          git fetch -q --depth 1 origin "$BASE_COMMIT"
+          git checkout -q FETCH_HEAD
+          git submodule update --init --recursive --depth 1
+
+      - name: Andolan2 degisikliklerini uygula
+        run: |
+          cp -rv andolan2/overlay/. winlator/
+
+      - name: Eksik buyuk dosyalari APK'dan cikar
+        working-directory: winlator
+        run: |
+          curl -L --fail --retry 3 -o /tmp/base.apk "$BASE_APK_URL"
+          mkdir -p /tmp/base && unzip -q /tmp/base.apk 'assets/*' -d /tmp/base
+          rm /tmp/base.apk
+          cp -rn /tmp/base/assets/. app/src/main/assets/
+          rm -rf /tmp/base
+          test -f app/src/main/assets/imagefs.txz
+          test -f app/src/main/assets/proton-9.0-x86_64.txz
+          test -f app/src/main/assets/andolan2/Andolan2Launcher.exe
+          du -sh app/src/main/assets
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android NDK ve CMake
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;27.0.12077973" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Derle
+        working-directory: winlator
+        run: |
+          sed -i 's/-Xmx8192m/-Xmx4096m/' gradle.properties
+          sed -i 's/^org.gradle.configuration-cache=true/org.gradle.configuration-cache=false/' gradle.properties
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+          mkdir -p ../out
+          cp app/build/outputs/apk/debug/*.apk ../out/Andolan2.apk
+          ls -la ../out
+
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Andolan2-APK
+          path: out/Andolan2.apk
+          compression-level: 0
+          retention-days: 30
