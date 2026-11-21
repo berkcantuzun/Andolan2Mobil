@@ -962,10 +962,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     @Override
     protected void onDestroy() {
+        if (isFinishing()) com.winlator.cmod.andolan.Andolan2Bootstrap.markGameClosed(this);
         super.onDestroy();
     }
 
     public void exitApp() {
+        com.winlator.cmod.andolan.Andolan2Bootstrap.markGameClosed(this);
 
         preloaderDialog.show(R.string.closing_app);
 

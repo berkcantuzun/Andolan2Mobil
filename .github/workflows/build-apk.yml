@@ -68,6 +68,11 @@ jobs:
           yes | "$SDKM" --licenses > /dev/null || true
           "$SDKM" "ndk;27.0.12077973" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0" > /dev/null
 
+      - name: Sabit imza anahtari (guncellemeler eskinin ustune kurulabilsin)
+        run: |
+          mkdir -p ~/.android
+          cp andolan2/signing/debug.keystore ~/.android/debug.keystore
+
       - name: Derle
         working-directory: winlator
         run: |

@@ -55,7 +55,17 @@ public final class Andolan2Bootstrap {
     /** Uygulama soguk acildiginda bir kez otomatik baslat. */
     public static void autostart(Activity activity) {
         if (launchedThisProcess || !isAutostartEnabled(activity)) return;
+        // Onceki oturum cokmusse otomatik baslatma (cokme dongusu olmasin), hata kaydini goster.
+        if (CrashReport.showIfPreviousSessionCrashed(activity)) {
+            launchedThisProcess = true;
+            return;
+        }
         launch(activity);
+    }
+
+    /** Oyun ekrani normal kapandiginda cagrilir. */
+    public static void markGameClosed(android.content.Context context) {
+        CrashReport.setInGame(context, false);
     }
 
     public static void launch(final Activity activity) {
@@ -92,6 +102,7 @@ public final class Andolan2Bootstrap {
                 final int containerId = container.id;
                 final String shortcutPath = shortcut.getPath();
                 ui.post(() -> {
+                    CrashReport.setInGame(activity, true);
                     Intent intent = new Intent(activity, XServerDisplayActivity.class);
                     intent.putExtra("container_id", containerId);
                     intent.putExtra("shortcut_path", shortcutPath);
@@ -123,6 +134,23 @@ public final class Andolan2Bootstrap {
         data.put("lc_all", "tr_TR.UTF-8");
         data.put("showFPS", false);
         data.put("fullscreenStretched", false);
+        // Arayuzden olusturulan container ile ayni varsayilanlar
+        data.put("envVars", Container.DEFAULT_ENV_VARS);
+        data.put("graphicsDriver", Container.DEFAULT_GRAPHICS_DRIVER);
+        data.put("graphicsDriverConfig", Container.DEFAULT_GRAPHICSDRIVERCONFIG);
+        data.put("dxwrapper", Container.DEFAULT_DXWRAPPER);
+        data.put("dxwrapperConfig", Container.DEFAULT_DXWRAPPERCONFIG);
+        data.put("ddrawrapper", Container.DEFAULT_DDRAWRAPPER);
+        data.put("audioDriver", Container.DEFAULT_AUDIO_DRIVER);
+        data.put("wincomponents", Container.DEFAULT_WINCOMPONENTS);
+        data.put("drives", Container.DEFAULT_DRIVES);
+        data.put("startupSelection", (int) Container.STARTUP_SELECTION_ESSENTIAL);
+        data.put("box64Version", com.winlator.cmod.core.DefaultVersion.BOX64);
+        data.put("box64Preset", com.winlator.cmod.box86_64.Box86_64Preset.COMPATIBILITY);
+        data.put("fexcoreVersion", com.winlator.cmod.core.DefaultVersion.FEXCORE);
+        data.put("desktopTheme", com.winlator.cmod.core.WineThemeManager.DEFAULT_DESKTOP_THEME);
+        data.put("rcfileId", 0);
+        data.put("midiSoundFont", "");
 
         // createContainer private oldugu icin async API'yi senkron bekliyoruz.
         final Object lock = new Object();
