@@ -38,7 +38,7 @@ public final class CrashReport {
     }
 
     /** @return true ise dialog gosterildi; otomatik baslatma yapilmamali. */
-    public static boolean showIfPreviousSessionCrashed(final Activity activity) {
+    public static boolean showIfPreviousSessionCrashed(final Activity activity, final Runnable onRetry) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         if (!prefs.getBoolean(PREF_IN_GAME, false)) return false;
         setInGame(activity, false);
@@ -56,10 +56,11 @@ public final class CrashReport {
         ScrollView sv = new ScrollView(activity);
         sv.addView(tv);
 
-        new AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("Andolan2 kapandı - hata kaydı")
             .setView(sv)
-            .setPositiveButton("Tekrar dene", (d, w) -> Andolan2Bootstrap.launch(activity))
+            .setCancelable(false)
+            .setPositiveButton("Tekrar dene", (d, w) -> onRetry.run())
             .setNeutralButton("Paylaş", (d, w) -> {
                 Intent send = new Intent(Intent.ACTION_SEND);
                 send.setType("text/plain");
@@ -71,6 +72,7 @@ public final class CrashReport {
                 ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
                 cm.setPrimaryClip(ClipData.newPlainText("Andolan2", report));
                 Toast.makeText(activity, "Kopyalandı", Toast.LENGTH_SHORT).show();
+                onRetry.run();
             })
             .show();
         return true;

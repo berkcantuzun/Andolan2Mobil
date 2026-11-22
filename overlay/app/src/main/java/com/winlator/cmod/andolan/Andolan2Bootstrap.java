@@ -52,69 +52,69 @@ public final class Andolan2Bootstrap {
         return PreferenceManager.getDefaultSharedPreferences(activity).getBoolean(PREF_AUTOSTART, true);
     }
 
-    /** Uygulama soguk acildiginda bir kez otomatik baslat. */
+    /** Eski MainActivity girisi icin; artik giris noktasi Andolan2SplashActivity. */
     public static void autostart(Activity activity) {
-        if (launchedThisProcess || !isAutostartEnabled(activity)) return;
-        // Onceki oturum cokmusse otomatik baslatma (cokme dongusu olmasin), hata kaydini goster.
-        if (CrashReport.showIfPreviousSessionCrashed(activity)) {
-            launchedThisProcess = true;
-            return;
-        }
-        launch(activity);
+        // bilerek bos: Winlator ekrani (gizli ayarlar) acildiginda oyun kendiliginden baslamasin
     }
+
+    public interface StatusCallback { void onStatus(String message, int permille); }
 
     /** Oyun ekrani normal kapandiginda cagrilir. */
     public static void markGameClosed(android.content.Context context) {
         CrashReport.setInGame(context, false);
     }
 
+    /** Winlator menusunden elle baslatma. */
     public static void launch(final Activity activity) {
-        launchedThisProcess = true;
-        final Handler ui = new Handler(Looper.getMainLooper());
-        Toast.makeText(activity, "Andolan2 hazırlanıyor...", Toast.LENGTH_SHORT).show();
-
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                applyFirstRunPreferences(activity);
-                ensureControlsProfile(activity);
-
-                ContainerManager manager = new ContainerManager(activity);
-                Container container = findContainer(manager);
-                if (container == null) {
-                    ContentsManager contentsManager = new ContentsManager(activity);
-                    contentsManager.syncContents();
-                    container = createContainer(manager, contentsManager);
-                }
-                if (container == null) {
-                    ui.post(() -> Toast.makeText(activity, "Andolan2 container oluşturulamadı", Toast.LENGTH_LONG).show());
-                    return;
-                }
-                repairContainer(container);
-                manager.activateContainer(container);
-
-                File gameDir = new File(container.getRootDir(), ".wine/drive_c/Andolan2");
-                if (!gameDir.isDirectory()) gameDir.mkdirs();
-                File launcher = new File(gameDir, LAUNCHER_EXE);
-                // Launcher kendini guncelleyebilir; sadece yoksa kopyala.
-                if (!launcher.isFile() || launcher.length() == 0) copyAsset(activity.getAssets(), ASSET_LAUNCHER, launcher);
-
-                File shortcut = writeShortcut(container);
-
-                final int containerId = container.id;
-                final String shortcutPath = shortcut.getPath();
-                ui.post(() -> {
-                    CrashReport.setInGame(activity, true);
-                    Intent intent = new Intent(activity, XServerDisplayActivity.class);
-                    intent.putExtra("container_id", containerId);
-                    intent.putExtra("shortcut_path", shortcutPath);
-                    intent.putExtra("shortcut_name", CONTAINER_NAME);
-                    intent.putExtra("disableXinput", "0");
-                    activity.startActivity(intent);
-                });
+                prepareAndLaunch(activity, null, null);
             } catch (Exception e) {
                 Log.e(TAG, "Baslatma hatasi", e);
-                ui.post(() -> Toast.makeText(activity, "Andolan2 başlatılamadı: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                new Handler(Looper.getMainLooper()).post(() ->
+                    Toast.makeText(activity, "Andolan2 başlatılamadı: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
+        });
+    }
+
+    /** Arka plan thread'inden cagrilir: container'i hazirlar ve oyun ekranini acar. */
+    public static void prepareAndLaunch(final Activity activity, StatusCallback status, Runnable onLaunched) throws Exception {
+        launchedThisProcess = true;
+        final Handler ui = new Handler(Looper.getMainLooper());
+        applyFirstRunPreferences(activity);
+        ensureControlsProfile(activity);
+
+        ContainerManager manager = new ContainerManager(activity);
+        Container container = findContainer(manager);
+        if (container == null) {
+            if (status != null) status.onStatus("Oyun ortamı oluşturuluyor…", 940);
+            ContentsManager contentsManager = new ContentsManager(activity);
+            contentsManager.syncContents();
+            container = createContainer(manager, contentsManager);
+        }
+        if (container == null) throw new IllegalStateException("Oyun ortamı oluşturulamadı");
+        repairContainer(container);
+        manager.activateContainer(container);
+
+        if (status != null) status.onStatus("Oyun dosyaları hazırlanıyor…", 980);
+        File gameDir = new File(container.getRootDir(), ".wine/drive_c/Andolan2");
+        if (!gameDir.isDirectory()) gameDir.mkdirs();
+        File launcher = new File(gameDir, LAUNCHER_EXE);
+        if (!launcher.isFile() || launcher.length() == 0) copyAsset(activity.getAssets(), ASSET_LAUNCHER, launcher);
+
+        File shortcut = writeShortcut(container);
+        final int containerId = container.id;
+        final String shortcutPath = shortcut.getPath();
+        ui.post(() -> {
+            CrashReport.setInGame(activity, true);
+            Intent intent = new Intent(activity, XServerDisplayActivity.class);
+            intent.putExtra("container_id", containerId);
+            intent.putExtra("shortcut_path", shortcutPath);
+            intent.putExtra("shortcut_name", CONTAINER_NAME);
+            intent.putExtra("disableXinput", "0");
+            activity.startActivity(intent);
+            activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            if (onLaunched != null) onLaunched.run();
         });
     }
 
@@ -160,7 +160,7 @@ public final class Andolan2Bootstrap {
         data.put("box64Version", com.winlator.cmod.core.DefaultVersion.BOX64);
         data.put("box64Preset", com.winlator.cmod.box86_64.Box86_64Preset.COMPATIBILITY);
         data.put("fexcoreVersion", com.winlator.cmod.core.DefaultVersion.FEXCORE);
-        data.put("desktopTheme", com.winlator.cmod.core.WineThemeManager.DEFAULT_DESKTOP_THEME);
+        data.put("desktopTheme", "DARK,COLOR,#000000");
         data.put("rcfileId", 0);
         data.put("midiSoundFont", "");
 
@@ -207,7 +207,6 @@ public final class Andolan2Bootstrap {
 
     private static void ensureControlsProfile(Activity activity) {
         File dst = new File(InputControlsManager.getProfilesDir(activity), "controls-" + CONTROLS_PROFILE_ID + ".icp");
-        if (dst.isFile()) return; // kullanicinin duzenlemelerini koru
         try {
             copyAsset(activity.getAssets(), ASSET_PROFILE, dst);
         } catch (Exception e) {
