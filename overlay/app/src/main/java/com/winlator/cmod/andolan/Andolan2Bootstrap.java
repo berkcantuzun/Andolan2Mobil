@@ -151,7 +151,7 @@ public final class Andolan2Bootstrap {
         data.put("lc_all", "tr_TR.UTF-8");
         data.put("showFPS", false);
         data.put("fullscreenStretched", false);
-        data.put("envVars", Container.DEFAULT_ENV_VARS);
+        data.put("envVars", stripEnv(Container.DEFAULT_ENV_VARS, "DXVK_HUD"));
         data.put("graphicsDriver", Container.DEFAULT_GRAPHICS_DRIVER);
         data.put("graphicsDriverConfig", Container.DEFAULT_GRAPHICSDRIVERCONFIG);
         data.put("dxwrapper", Container.DEFAULT_DXWRAPPER);
@@ -200,7 +200,7 @@ public final class Andolan2Bootstrap {
             "\n" +
             "[Extra Data]\n" +
             "controlsProfile=" + CONTROLS_PROFILE_ID + "\n" +
-            "envVars=WINEDEBUG=err+all,fixme-all DXVK_HUD=0 MANGOHUD=0\n" +
+            "envVars=WINEDEBUG=-all DXVK_HUD= MANGOHUD=0\n" +
             "screenSize=" + screenSize + "\n" +
             "forceFullscreen=1\n" +
             "lc_all=tr_TR.UTF-8\n";

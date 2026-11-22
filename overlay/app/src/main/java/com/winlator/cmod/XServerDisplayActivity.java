@@ -1024,14 +1024,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     @Override
     public void onBackPressed() {
-        if (environment != null) {
-            releasePointerCaptureIfNeeded("open-drawer/back");
-            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                drawerLayout.openDrawer(GravityCompat.START);
-            } else {
-                drawerLayout.closeDrawers();
-            }
-        }
+        moveTaskToBack(true);
     }
 
     private void openXServerDrawer() {
@@ -1886,9 +1879,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         isMouseDisabled = preferences.getBoolean("touchscreen_mouse_disabled", false);
         touchpadView.setTouchscreenMouseDisabled(isMouseDisabled);
         touchpadView.setSensitivity(globalCursorSpeed);
-        touchpadView.setFourFingersTapCallback(() -> {
-            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) drawerLayout.openDrawer(GravityCompat.START);
-        });
+        touchpadView.setFourFingersTapCallback(() -> {});
         rootView.addView(touchpadView);
 
 

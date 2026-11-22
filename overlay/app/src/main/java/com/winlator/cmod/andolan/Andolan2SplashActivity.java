@@ -53,11 +53,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
         setContentView(buildLayout());
         AppUtils.hideSystemUI(this);
 
-        if (CrashReport.showIfPreviousSessionCrashed(this, this::startPreparation)) {
-            crashDialogPending = true;
-            setStatus("Önceki oturum beklenmedik şekilde kapandı", 0);
-            return;
-        }
         startPreparation();
     }
 
