@@ -1,0 +1,105 @@
+name: Andolan2 APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 120
+    env:
+      BASE_REPO: https://github.com/coffincolors/winlator.git
+      BASE_COMMIT: 49bfb90fce932107cf6a7c1af62f910e7a1a2bfd
+      SDL2_TAG: release-2.32.10
+      BASE_APK_URL: https://github.com/coffincolors/winlator/releases/download/cmod_v13.1/Winlator-Cmod-v13.1.1.apk
+    steps:
+      - name: Disk alani ac
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Andolan2 dosyalarini al
+        uses: actions/checkout@v4
+        with:
+          path: andolan2
+
+      - name: Winlator Cmod kaynagini al
+        run: |
+          git init -q winlator && cd winlator
+          git remote add origin "$BASE_REPO"
+          git fetch -q --depth 1 origin "$BASE_COMMIT"
+          git checkout -q FETCH_HEAD
+          # OpenXR-SDK alt modulu normal
+          git submodule update --init --depth 1 app/src/main/cpp/OpenXR-SDK
+          # sdl2 alt modulunun adresi .gitmodules'ta yok (Cmod deposunda bozuk) -> resmi SDL2 surumunu kullan
+          rm -rf app/src/main/cpp/sdl2
+          git clone -q --depth 1 -b "$SDL2_TAG" https://github.com/libsdl-org/SDL.git app/src/main/cpp/sdl2
+          ls app/src/main/cpp/sdl2/CMakeLists.txt
+
+      - name: Andolan2 degisikliklerini uygula
+        run: |
+          cp -rv andolan2/overlay/. winlator/
+
+      - name: Eksik buyuk dosyalari APK'dan cikar
+        working-directory: winlator
+        run: |
+          curl -L --fail --retry 3 -o /tmp/base.apk "$BASE_APK_URL"
+          mkdir -p /tmp/base && unzip -q /tmp/base.apk 'assets/*' -d /tmp/base
+          rm /tmp/base.apk
+          cp -rn /tmp/base/assets/. app/src/main/assets/
+          rm -rf /tmp/base
+          test -f app/src/main/assets/imagefs.txz
+          test -f app/src/main/assets/proton-9.0-x86_64.txz
+          test -f app/src/main/assets/andolan2/Andolan2Launcher.exe
+          du -sh app/src/main/assets
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android NDK ve CMake
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;27.0.12077973" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Sabit imza anahtari (guncellemeler eskinin ustune kurulabilsin)
+        run: |
+          mkdir -p ~/.android
+          cp andolan2/signing/debug.keystore ~/.android/debug.keystore
+          cp andolan2/signing/debug.keystore winlator/app/andolan.keystore
+          if ! grep -q ANDOLAN_SIGNING winlator/app/build.gradle; then
+            printf '\n// ANDOLAN_SIGNING\nandroid.signingConfigs.debug {\n    storeFile file("andolan.keystore")\n    storePassword "android"\n    keyAlias "androiddebugkey"\n    keyPassword "android"\n}\n' >> winlator/app/build.gradle
+          fi
+
+      - name: Derle
+        working-directory: winlator
+        run: |
+          VER="1.0.${{ github.run_number }}"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          sed -i -E "s/versionCode [0-9]+/versionCode $((100 + ${{ github.run_number }}))/" app/build.gradle
+          sed -i -E "s/versionName \"[^\"]*\"/versionName \"$VER\"/" app/build.gradle
+          grep -E "versionCode|versionName" app/build.gradle
+          sed -i 's/-Xmx8192m/-Xmx4096m/' gradle.properties
+          sed -i 's/^org.gradle.configuration-cache=true/org.gradle.configuration-cache=false/' gradle.properties
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+          mkdir -p ../out
+          cp app/build/outputs/apk/debug/*.apk "../out/Andolan2-v$VER.apk"
+          ls -la ../out
+
+      - name: Surum olarak yayinla
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true   # eski sabit-adli yayin
+          gh release create "v$VER" "out/Andolan2-v$VER.apk" \
+            --title "Andolan2 v$VER" \
+            --notes "$(git -C andolan2 log -1 --format=%s) (${GITHUB_SHA::7})" \
+            --target "$GITHUB_SHA" --latest
