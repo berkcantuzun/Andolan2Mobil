@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 120
     env:
       # Taban: Winlator Cmod (GPL-3.0), cmod_bionic dali, sabit commit
@@ -91,3 +93,14 @@ jobs:
           path: out/Andolan2.apk
           compression-level: 0
           retention-days: 30
+
+      - name: Sabit linke yayinla (telefondan direkt indirme)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest out/Andolan2.apk \
+            --title "Andolan2 (son surum)" \
+            --notes "Otomatik derleme: ${GITHUB_SHA::7} - $(date -u '+%Y-%m-%d %H:%M') UTC" \
+            --target "$GITHUB_SHA" --latest

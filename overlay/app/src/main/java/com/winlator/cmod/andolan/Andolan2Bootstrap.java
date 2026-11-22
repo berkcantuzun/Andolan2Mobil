@@ -89,6 +89,7 @@ public final class Andolan2Bootstrap {
                     ui.post(() -> Toast.makeText(activity, "Andolan2 container oluşturulamadı", Toast.LENGTH_LONG).show());
                     return;
                 }
+                repairContainer(container);
                 manager.activateContainer(container);
 
                 File gameDir = new File(container.getRootDir(), ".wine/drive_c/Andolan2");
@@ -117,6 +118,17 @@ public final class Andolan2Bootstrap {
         });
     }
 
+    /** Eski surumlerde bozuk kaydedilen DXVK ayarini onar. */
+    private static void repairContainer(Container container) {
+        String cfg = container.getDXWrapperConfig();
+        if (cfg == null || !cfg.contains("version=")) {
+            Log.w(TAG, "dxwrapperConfig onariliyor: '" + cfg + "'");
+            container.setDXWrapperConfig(Container.DEFAULT_DXWRAPPERCONFIG);
+            container.putExtra("dxwrapper", null);
+            container.saveData();
+        }
+    }
+
     private static Container findContainer(ContainerManager manager) {
         for (Container c : manager.getContainers()) {
             if (CONTAINER_NAME.equals(c.getName())) return c;
@@ -139,8 +151,8 @@ public final class Andolan2Bootstrap {
         data.put("graphicsDriver", Container.DEFAULT_GRAPHICS_DRIVER);
         data.put("graphicsDriverConfig", Container.DEFAULT_GRAPHICSDRIVERCONFIG);
         data.put("dxwrapper", Container.DEFAULT_DXWRAPPER);
-        data.put("dxwrapperConfig", Container.DEFAULT_DXWRAPPERCONFIG);
         data.put("ddrawrapper", Container.DEFAULT_DDRAWRAPPER);
+        data.put("dxwrapperConfig", Container.DEFAULT_DXWRAPPERCONFIG);
         data.put("audioDriver", Container.DEFAULT_AUDIO_DRIVER);
         data.put("wincomponents", Container.DEFAULT_WINCOMPONENTS);
         data.put("drives", Container.DEFAULT_DRIVES);
