@@ -503,7 +503,7 @@ public class Container {
                     break;
                 case "ddrawrapper":
                     setDDrawWrapper(data.getString(key));
-                    break; // Andolan2: eksik break dxwrapperConfig'i bozuyordu
+                    break;
                 case "dxwrapperConfig" :
                     setDXWrapperConfig(data.getString(key));
                     break;

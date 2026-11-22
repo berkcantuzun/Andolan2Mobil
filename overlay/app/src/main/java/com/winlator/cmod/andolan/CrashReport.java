@@ -24,10 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Oyun ekrani acikken uygulama cokerse, bir sonraki acilista kendi logcat kaydimizdan
- * hatayi bulup ekranda gosterir (Kopyala / Paylas / Tekrar dene).
- */
 public final class CrashReport {
     private static final String PREF_IN_GAME = "andolan2_in_game";
 
@@ -37,7 +33,6 @@ public final class CrashReport {
         PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(PREF_IN_GAME, inGame).commit();
     }
 
-    /** @return true ise dialog gosterildi; otomatik baslatma yapilmamali. */
     public static boolean showIfPreviousSessionCrashed(final Activity activity, final Runnable onRetry) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         if (!prefs.getBoolean(PREF_IN_GAME, false)) return false;
@@ -96,7 +91,6 @@ public final class CrashReport {
             head.append("logcat okunamadi: ").append(e).append('\n');
         }
 
-        // Son cokmeyi bul: Java (FATAL EXCEPTION) veya native (Fatal signal)
         int start = -1;
         for (int i = lines.size() - 1; i >= 0; i--) {
             String l = lines.get(i);
@@ -108,7 +102,6 @@ public final class CrashReport {
             int to = Math.min(lines.size(), start + 120);
             for (int i = from; i < to; i++) body.append(lines.get(i)).append('\n');
         } else {
-            // Cokme satiri yoksa son uyari/hatalari ver
             int count = 0;
             for (int i = lines.size() - 1; i >= 0 && count < 200; i--) {
                 String l = lines.get(i);

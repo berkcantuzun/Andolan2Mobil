@@ -15,7 +15,6 @@ import com.winlator.cmod.R;
 public class PreloaderDialog {
     private final Activity activity;
     private Dialog dialog;
-    // Andolan2: sure sayaci, dokununca gizle, otomatik gizleme, kayit paylasma
     private final Handler ticker = new Handler(Looper.getMainLooper());
     private long shownAt;
     private boolean startup;

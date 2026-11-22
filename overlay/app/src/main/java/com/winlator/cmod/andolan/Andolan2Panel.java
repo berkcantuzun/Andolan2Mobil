@@ -30,13 +30,6 @@ import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XServer;
 
-/**
- * Andolan2 oyun ici kontrolleri (Metin2 mobil tarzi):
- *  - Sag alt: buyuk SALDIR (Space), etrafinda 1-4 beceri yayi, disinda F1-F4, TOPLA (Z)
- *  - Sol alt: WASD joystick
- *  - Sol ust: ESC, Sohbet (Enter), Klavye, CTRL, Sag tik, Sag tik modu
- *  - Ust orta: tum kontrolleri gizle/goster
- */
 public final class Andolan2Panel {
     private static final String PREF_VISIBLE = "andolan2_controls_visible";
 
@@ -61,10 +54,9 @@ public final class Andolan2Panel {
     private GameButton rightModeButton;
     private View rightClickCatcher;
     private boolean rightMode = false;
-    private boolean ready = false;   // oyun penceresi acilana kadar kontroller gizli
+    private boolean ready = false;
     private static java.lang.ref.WeakReference<Andolan2Panel> current;
 
-    /** Oyun penceresi acildiginda / yukleme ekrani kapandiginda cagrilir. */
     public static void reveal() {
         Andolan2Panel p = current != null ? current.get() : null;
         if (p == null) return;
@@ -84,7 +76,6 @@ public final class Andolan2Panel {
         return p;
     }
 
-    /** Winlator'in kendi kontrol katmanini gizlemek icin XServerDisplayActivity'den cagrilir. */
     public static void hideWinlatorControls(InputControlsView v) {
         if (v != null) v.setVisibility(View.GONE);
     }
@@ -115,8 +106,7 @@ public final class Andolan2Panel {
         layer.setMotionEventSplittingEnabled(true);
         root.addView(layer, new FrameLayout.LayoutParams(-1, -1));
 
-        // ---------------- sag alt: saldiri kumesi ----------------
-        final float ax = 100, ay = 92;   // saldiri merkezi (sagdan, alttan dp)
+        final float ax = 100, ay = 92;
         GameButton attack = new GameButton(activity, GameButton.STYLE_ATTACK, null, GameButton.ICON_SWORDS);
         bindKey(attack, XKeycode.KEY_SPACE);
         placeBR(attack, ax, ay, 54);
@@ -142,14 +132,12 @@ public final class Andolan2Panel {
         bindKey(pickup, XKeycode.KEY_Z);
         placeArc(pickup, ax, ay, 100, 55, 23);
 
-        // ---------------- sol alt: joystick ----------------
         Joystick joy = new Joystick(activity);
         FrameLayout.LayoutParams jlp = new FrameLayout.LayoutParams(dp(170), dp(170), Gravity.BOTTOM | Gravity.START);
         jlp.leftMargin = dp(48);
         jlp.bottomMargin = dp(18);
         layer.addView(joy, jlp);
 
-        // ---------------- sol ust: yardimci tuslar ----------------
         float colX = 34, col2X = 86, rowY = 64, step = 52;
         GameButton esc = new GameButton(activity, GameButton.STYLE_DARK, "ESC", 0);
         esc.setSmallText(true);
@@ -184,20 +172,17 @@ public final class Andolan2Panel {
         rightModeButton.setOnClickListener(v -> toggleRightMode());
         placeTL(rightModeButton, col2X, rowY + step, 21);
 
-        // ---------------- ust orta: gizle/goster ----------------
         toggleButton = new GameButton(activity, GameButton.STYLE_PILL, null, GameButton.ICON_EYE);
         toggleButton.setOnClickListener(v -> setVisible(layer.getVisibility() != View.VISIBLE));
-        toggleButton.setOnLongClickListener(v -> { Andolan2Diag.share(activity); return true; }); // uzun bas: Wine kaydini paylas
+        toggleButton.setOnLongClickListener(v -> { Andolan2Diag.share(activity); return true; });
         FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(dp(54), dp(28), Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         tlp.topMargin = dp(4);
         root.addView(toggleButton, tlp);
 
-        // Oyun penceresi gelene kadar hicbir kontrol gorunmesin
         layer.setVisibility(View.GONE);
         toggleButton.setVisibility(View.GONE);
-        root.postDelayed(Andolan2Panel::reveal, 90_000); // yedek: ne olursa olsun 90 sn sonra goster
+        root.postDelayed(Andolan2Panel::reveal, 90_000);
 
-        // Guvenli alan: kamera centigi / yuvarlak koseler
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             applySafeArea(insets);
             return insets;
@@ -209,7 +194,7 @@ public final class Andolan2Panel {
     }
 
     private void applySafeArea(WindowInsets insets) {
-        int base = dp(10);                       // yuvarlak koseler icin her zaman biraz pay
+        int base = dp(10);
         int l = base, t = dp(2), r = base, b = dp(4);
         if (Build.VERSION.SDK_INT >= 28) {
             DisplayCutout dc = insets.getDisplayCutout();
@@ -234,8 +219,6 @@ public final class Andolan2Panel {
         prefs.edit().putBoolean(PREF_VISIBLE, visible).apply();
     }
 
-    // ---------------- yerlesim ----------------
-
     private void placeBR(View v, float cx, float cy, float r) {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(r * 2), dp(r * 2), Gravity.BOTTOM | Gravity.END);
         lp.rightMargin = dp(cx - r);
@@ -243,7 +226,6 @@ public final class Andolan2Panel {
         layer.addView(v, lp);
     }
 
-    /** Saldiri merkezinden aci (0=sag, 90=yukari, 180=sol) ve uzaklikla yerlestir. */
     private void placeArc(View v, float ax, float ay, float dist, float angleDeg, float r) {
         double a = Math.toRadians(angleDeg);
         float cx = ax - (float) (Math.cos(a) * dist);
@@ -257,8 +239,6 @@ public final class Andolan2Panel {
         lp.topMargin = dp(cy - r);
         layer.addView(v, lp);
     }
-
-    // ---------------- giris ----------------
 
     @SuppressLint("ClickableViewAccessibility")
     private void bindKey(GameButton b, XKeycode key) {
@@ -297,9 +277,6 @@ public final class Andolan2Panel {
         root.postDelayed(() -> xServer.injectPointerButtonRelease(Pointer.Button.BUTTON_RIGHT), 40);
     }
 
-    // =====================================================================
-    // WASD joystick
-    // =====================================================================
     private final class Joystick extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private float knobX, knobY;
@@ -390,9 +367,6 @@ public final class Andolan2Panel {
         }
     }
 
-    // =====================================================================
-    // Yuvarlak oyun dugmesi
-    // =====================================================================
     static final class GameButton extends View {
         static final int STYLE_RED = 0, STYLE_DARK = 1, STYLE_ATTACK = 2, STYLE_PILL = 3;
         static final int ICON_SWORDS = 1, ICON_CHAT = 2, ICON_KEYBOARD = 3, ICON_EYE = 4;
@@ -411,7 +385,7 @@ public final class Andolan2Panel {
             this.icon = icon;
             this.dd = c.getResources().getDisplayMetrics().density;
             setClickable(true);
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null); // setShadowLayer icin
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         }
 
         void setSmallText(boolean v) { smallText = v; invalidate(); }

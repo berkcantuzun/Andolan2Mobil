@@ -12,10 +12,8 @@ jobs:
       contents: write
     timeout-minutes: 120
     env:
-      # Taban: Winlator Cmod (GPL-3.0), cmod_bionic dali, sabit commit
       BASE_REPO: https://github.com/coffincolors/winlator.git
       BASE_COMMIT: 49bfb90fce932107cf6a7c1af62f910e7a1a2bfd
-      # Wine/imagefs gibi buyuk dosyalar (Git LFS) bu APK'nin icinden alinir
       SDL2_TAG: release-2.32.10
       BASE_APK_URL: https://github.com/coffincolors/winlator/releases/download/cmod_v13.1/Winlator-Cmod-v13.1.1.apk
     steps:

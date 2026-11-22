@@ -20,10 +20,6 @@ import java.util.ArrayDeque;
 import java.util.Date;
 import java.util.Locale;
 
-/**
- * Wine / Box64 ciktisini toplar (ProcessHelper debug callback'i). Son satirlar bellekte tutulur,
- * tamami files/andolan2_wine.log dosyasina yazilir. Paylas ile kullaniciya gonderilebilir.
- */
 public final class Andolan2Diag {
     private static final int MAX_LINES = 1500;
     private static final ArrayDeque<String> lines = new ArrayDeque<>();
@@ -33,7 +29,6 @@ public final class Andolan2Diag {
 
     private Andolan2Diag() {}
 
-    /** XServerDisplayActivity, ProcessHelper.removeAllDebugCallbacks() sonrasi cagirir. */
     public static synchronized void attach(Context context) {
         lines.clear();
         startMs = System.currentTimeMillis();

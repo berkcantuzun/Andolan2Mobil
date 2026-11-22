@@ -444,7 +444,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             return true; // Permissions are still being requested
         }
 
-        return false; // Andolan2: oyun uygulama icinde calisir, tum dosya erisimi gerekmez
+        return false;
     }
 
     @Override

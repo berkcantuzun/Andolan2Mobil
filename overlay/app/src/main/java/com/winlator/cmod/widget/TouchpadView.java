@@ -700,7 +700,6 @@ public class TouchpadView extends View {
         return simTouchScreen;
     }
 
-    /** Andolan2: ekran (view) koordinatini X sunucusu koordinatina cevirir. */
     public float[] mapToXServer(float x, float y) {
         return XForm.transformPoint(xform, x, y);
     }

@@ -511,7 +511,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             LogView.setFilename(getExecutable());
             ProcessHelper.addDebugCallback(debugDialog = new DebugDialog(this));
         }
-        com.winlator.cmod.andolan.Andolan2Diag.attach(this); // Andolan2: Wine ciktisini kaydet
+        com.winlator.cmod.andolan.Andolan2Diag.attach(this);
 
         // Retrieve secondary executable and delay
         String secondaryExec = shortcut != null ? shortcut.getExtra("secondaryExec") : null;
@@ -603,7 +603,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             @Override
             public void onUpdateWindowContent(Window window) {
                 if (!winStarted[0] && window.isApplicationWindow()) {
-                    xServerView.getRenderer().setCursorVisible(false); // Andolan2: dokunmatik mod, fare oku gizli
+                    xServerView.getRenderer().setCursorVisible(false);
                     preloaderDialog.closeOnUiThread();
                     winStarted[0] = true;
                 }
@@ -1945,7 +1945,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         AppUtils.observeSoftKeyboardVisibility(drawerLayout, renderer::setScreenOffsetYRelativeToCursor);
-        // Andolan2: acilir/kapanir tus paneli
         com.winlator.cmod.andolan.Andolan2Panel.attach(this, rootView, xServer, touchpadView, inputControlsView);
     }
 

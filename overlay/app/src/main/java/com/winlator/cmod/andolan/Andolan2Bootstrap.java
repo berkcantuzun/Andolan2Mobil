@@ -26,11 +26,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executors;
 
-/**
- * Andolan2 Mobil: ilk acilista Wine container'ini hazirlar, APK icindeki
- * Andolan2Launcher.exe'yi C:\Andolan2 klasorune kopyalar ve dogrudan oyunu baslatir.
- * Launcher diger oyun dosyalarini kendisi indirir.
- */
 public final class Andolan2Bootstrap {
     private static final String TAG = "Andolan2";
 
@@ -53,19 +48,15 @@ public final class Andolan2Bootstrap {
         return PreferenceManager.getDefaultSharedPreferences(activity).getBoolean(PREF_AUTOSTART, true);
     }
 
-    /** Eski MainActivity girisi icin; artik giris noktasi Andolan2SplashActivity. */
     public static void autostart(Activity activity) {
-        // bilerek bos: Winlator ekrani (gizli ayarlar) acildiginda oyun kendiliginden baslamasin
     }
 
     public interface StatusCallback { void onStatus(String message, int permille); }
 
-    /** Oyun ekrani normal kapandiginda cagrilir. */
     public static void markGameClosed(android.content.Context context) {
         CrashReport.setInGame(context, false);
     }
 
-    /** Winlator menusunden elle baslatma. */
     public static void launch(final Activity activity) {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
@@ -78,7 +69,6 @@ public final class Andolan2Bootstrap {
         });
     }
 
-    /** Arka plan thread'inden cagrilir: container'i hazirlar ve oyun ekranini acar. */
     public static void prepareAndLaunch(final Activity activity, StatusCallback status, Runnable onLaunched) throws Exception {
         launchedThisProcess = true;
         final Handler ui = new Handler(Looper.getMainLooper());
@@ -102,7 +92,6 @@ public final class Andolan2Bootstrap {
         if (!gameDir.isDirectory()) gameDir.mkdirs();
         File launcher = new File(gameDir, LAUNCHER_EXE);
         if (!launcher.isFile() || launcher.length() == 0) copyAsset(activity.getAssets(), ASSET_LAUNCHER, launcher);
-        // Launcher yaninda launcher.cfg olmadan calismiyor ("launcher.cfg bulunamadi veya url satiri yok")
         File cfg = new File(gameDir, "launcher.cfg");
         if (!cfg.isFile() || !FileUtilsCompat.contains(cfg, "url=")) {
             try (OutputStream out = new FileOutputStream(cfg)) {
@@ -110,7 +99,6 @@ public final class Andolan2Bootstrap {
             }
         }
 
-        // Tam ekran: Wine ekranini telefonun en-boy oranina gore ayarla, oyunu ayni cozunurluge zorla
         String screenSize = computeScreenSize(activity);
         container.setScreenSize(screenSize);
         container.setEnvVars(stripEnv(container.getEnvVars(), "DXVK_HUD"));
@@ -136,7 +124,6 @@ public final class Andolan2Bootstrap {
         });
     }
 
-    /** Eski surumlerde bozuk kaydedilen DXVK ayarini onar. */
     private static void repairContainer(Container container) {
         String cfg = container.getDXWrapperConfig();
         if (cfg == null || !cfg.contains("version=")) {
@@ -160,11 +147,10 @@ public final class Andolan2Bootstrap {
         data.put("screenSize", "1280x720");
         data.put("wineVersion", "proton-9.0-x86_64");
         data.put("emulator", "box64");
-        data.put("wow64Mode", true);           // Metin2 istemcisi 32-bit
+        data.put("wow64Mode", true);
         data.put("lc_all", "tr_TR.UTF-8");
         data.put("showFPS", false);
         data.put("fullscreenStretched", false);
-        // Arayuzden olusturulan container ile ayni varsayilanlar
         data.put("envVars", Container.DEFAULT_ENV_VARS);
         data.put("graphicsDriver", Container.DEFAULT_GRAPHICS_DRIVER);
         data.put("graphicsDriverConfig", Container.DEFAULT_GRAPHICSDRIVERCONFIG);
@@ -182,7 +168,6 @@ public final class Andolan2Bootstrap {
         data.put("rcfileId", 0);
         data.put("midiSoundFont", "");
 
-        // createContainer private oldugu icin async API'yi senkron bekliyoruz.
         final Object lock = new Object();
         final Container[] result = new Container[1];
         final boolean[] done = {false};
@@ -203,7 +188,6 @@ public final class Andolan2Bootstrap {
         if (!desktopDir.isDirectory()) desktopDir.mkdirs();
         File file = new File(desktopDir, CONTAINER_NAME + ".desktop");
 
-        // Shortcut.java icindeki StringUtils.unescape her "\" icin dosyada "\\\\" bekliyor.
         String exePath = (GAME_DIR_WIN + "\\" + LAUNCHER_EXE).replace("\\", "\\\\\\\\");
         String content =
             "[Desktop Entry]\n" +
@@ -239,7 +223,7 @@ public final class Andolan2Bootstrap {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         if (prefs.getBoolean(PREF_FIRST_SETUP, false)) return;
         prefs.edit()
-            .putBoolean("touchscreen_toggle", true)        // dokunulan yere tikla (Metin2 icin dogal)
+            .putBoolean("touchscreen_toggle", true)
             .putBoolean("touchscreen_timeout_enabled", false)
             .putBoolean(PREF_FIRST_SETUP, true)
             .apply();
@@ -255,10 +239,6 @@ public final class Andolan2Bootstrap {
         }
     }
 
-
-    // ------------------------------------------------------------------ tam ekran yardimcilari
-
-    /** Yukseklik 720, genislik telefonun en-boy oranina gore (8'in kati). */
     static String computeScreenSize(Activity activity) {
         android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
         activity.getWindowManager().getDefaultDisplay().getRealMetrics(dm);
@@ -293,7 +273,6 @@ public final class Andolan2Bootstrap {
         "SHADOW_LEVEL\t\t\t1", "USE_DEFAULT_IME\t\t0", "SHOW_RENDERTARGET\t\t0"
     };
 
-    /** WIDTH/HEIGHT/WINDOWED/BPP satirlarini zorla; dosya yoksa mobil varsayilanlarla olustur. */
     static synchronized boolean patchMetin2Cfg(File cfg, int w, int h) {
         try {
             java.util.List<String> lines = new java.util.ArrayList<>();
@@ -331,7 +310,6 @@ public final class Andolan2Bootstrap {
 
     private static Thread cfgGuard;
 
-    /** Launcher indirme sirasinda metin2.cfg'yi degistirirse 15 dk boyunca geri duzelt. */
     static synchronized void startCfgGuard(File cfg, int w, int h) {
         if (cfgGuard != null) cfgGuard.interrupt();
         cfgGuard = new Thread(() -> {

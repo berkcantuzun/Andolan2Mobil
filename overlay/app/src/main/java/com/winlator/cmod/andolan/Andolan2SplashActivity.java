@@ -36,12 +36,6 @@ import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Andolan2 acilis ekrani. Uygulamanin tek giris noktasi:
- * Wine kurulumu, container hazirligi ve oyunu baslatma burada, kendi arayuzumuzle yapilir.
- * Winlator ekranlari (MainActivity) kullaniciya hic gosterilmez.
- * Gizli ayarlar: logoya 3 saniye basili tut.
- */
 public class Andolan2SplashActivity extends AppCompatActivity {
     private static final String TAG = "Andolan2Splash";
 
@@ -76,7 +70,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // "Paylas" sonrasi geri donuldugunde devam et
         if (crashDialogPending && pausedSinceDialog && !started) startPreparation();
     }
 
@@ -88,11 +81,8 @@ public class Andolan2SplashActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Kurulum yarida kesilmesin
         if (!started) super.onBackPressed();
     }
-
-    // ------------------------------------------------------------------ arayuz
 
     private View buildLayout() {
         float d = getResources().getDisplayMetrics().density;
@@ -109,7 +99,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
         logo.setAdjustViewBounds(true);
         logo.setContentDescription("Andolan2");
         logo.setOnLongClickListener(v -> false);
-        // Gizli ayarlar: 3 sn basili tut
         final Runnable openSettings = () -> {
             startActivity(new Intent(this, MainActivity.class));
             finish();
@@ -167,8 +156,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
         });
     }
 
-    // ------------------------------------------------------------------ akis
-
     private void startPreparation() {
         if (started) return;
         started = true;
@@ -186,7 +173,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
                 setStatus("Oyun hazırlanıyor…", 920);
                 Andolan2Bootstrap.prepareAndLaunch(this, (msg, permille) -> setStatus(msg, permille), () -> ui.post(() -> {
                     setStatus("Başlatılıyor…", 1000);
-                    // Oyun ekrani acilinca bu ekran kapanir; geri tusu uygulamadan cikar.
                     ui.postDelayed(this::finish, 1500);
                 }));
             } catch (Throwable t) {
@@ -197,7 +183,6 @@ public class Andolan2SplashActivity extends AppCompatActivity {
         });
     }
 
-    /** ImageFsInstaller.installFromAssets ile ayni is, ama Winlator dialoglari olmadan. */
     private boolean installSystemFiles(ImageFs imageFs) {
         File rootDir = imageFs.getRootDir();
         setStatus("Sistem dosyaları kuruluyor…", 0);
