@@ -74,6 +74,20 @@ jobs:
         run: |
           mkdir -p ~/.android
           cp andolan2/signing/debug.keystore ~/.android/debug.keystore
+          # Anahtari dogrudan build.gradle'e bagla (HOME yoluna guvenme) -> imza her surumde ayni
+          cp andolan2/signing/debug.keystore winlator/app/andolan.keystore
+          if ! grep -q "ANDOLAN_SIGNING" winlator/app/build.gradle; then
+          cat >> winlator/app/build.gradle <<'GRADLE'
+
+// ANDOLAN_SIGNING: sabit imza - guncellemeler eskinin ustune kurulsun
+android.signingConfigs.debug {
+    storeFile file("andolan.keystore")
+    storePassword "android"
+    keyAlias "androiddebugkey"
+    keyPassword "android"
+}
+GRADLE
+          fi
 
       - name: Derle
         working-directory: winlator
