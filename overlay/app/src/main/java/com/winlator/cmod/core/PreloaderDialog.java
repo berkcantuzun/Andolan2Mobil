@@ -86,6 +86,7 @@ public class PreloaderDialog {
 
     public synchronized void close() {
         ticker.removeCallbacks(tick);
+        if (startup) com.winlator.cmod.andolan.Andolan2Panel.reveal();
         try {
             if (dialog != null) {
                 dialog.dismiss();

@@ -110,7 +110,17 @@ public final class Andolan2Bootstrap {
             }
         }
 
-        File shortcut = writeShortcut(container);
+        // Tam ekran: Wine ekranini telefonun en-boy oranina gore ayarla, oyunu ayni cozunurluge zorla
+        String screenSize = computeScreenSize(activity);
+        container.setScreenSize(screenSize);
+        container.setEnvVars(stripEnv(container.getEnvVars(), "DXVK_HUD"));
+        container.saveData();
+        int[] wh = parseSize(screenSize);
+        File cfgFile = new File(gameDir, "metin2.cfg");
+        patchMetin2Cfg(cfgFile, wh[0], wh[1]);
+        startCfgGuard(cfgFile, wh[0], wh[1]);
+
+        File shortcut = writeShortcut(container, screenSize);
         final int containerId = container.id;
         final String shortcutPath = shortcut.getPath();
         ui.post(() -> {
@@ -188,7 +198,7 @@ public final class Andolan2Bootstrap {
         return result[0];
     }
 
-    private static File writeShortcut(Container container) throws Exception {
+    private static File writeShortcut(Container container, String screenSize) throws Exception {
         File desktopDir = container.getDesktopDir();
         if (!desktopDir.isDirectory()) desktopDir.mkdirs();
         File file = new File(desktopDir, CONTAINER_NAME + ".desktop");
@@ -202,11 +212,13 @@ public final class Andolan2Bootstrap {
             "Type=Application\n" +
             "StartupNotify=true\n" +
             "Path=" + GAME_DIR_WIN.replace("\\", "\\\\\\\\") + "\n" +
-            "StartupWMClass=andolan2client.exe\n" +
+            "StartupWMClass=andolan2launcher\n" +
             "\n" +
             "[Extra Data]\n" +
             "controlsProfile=" + CONTROLS_PROFILE_ID + "\n" +
-            "envVars=WINEDEBUG=err+all,fixme-all\n" +
+            "envVars=WINEDEBUG=err+all,fixme-all DXVK_HUD=0 MANGOHUD=0\n" +
+            "screenSize=" + screenSize + "\n" +
+            "forceFullscreen=1\n" +
             "lc_all=tr_TR.UTF-8\n";
         try (OutputStream out = new FileOutputStream(file)) {
             out.write(content.getBytes(StandardCharsets.UTF_8));
@@ -241,6 +253,101 @@ public final class Andolan2Bootstrap {
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
         }
+    }
+
+
+    // ------------------------------------------------------------------ tam ekran yardimcilari
+
+    /** Yukseklik 720, genislik telefonun en-boy oranina gore (8'in kati). */
+    static String computeScreenSize(Activity activity) {
+        android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
+        activity.getWindowManager().getDefaultDisplay().getRealMetrics(dm);
+        int lng = Math.max(dm.widthPixels, dm.heightPixels);
+        int sht = Math.max(1, Math.min(dm.widthPixels, dm.heightPixels));
+        int h = 720;
+        int w = Math.round(h * (float) lng / sht / 8f) * 8;
+        if (w < 1280) w = 1280;
+        if (w > 2400) w = 2400;
+        return w + "x" + h;
+    }
+
+    static int[] parseSize(String s) {
+        String[] p = s.split("x");
+        return new int[]{Integer.parseInt(p[0].trim()), Integer.parseInt(p[1].trim())};
+    }
+
+    static String stripEnv(String env, String key) {
+        if (env == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String part : env.split(" ")) {
+            if (part.isEmpty() || part.startsWith(key + "=")) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(part);
+        }
+        return sb.toString();
+    }
+
+    private static final String[] CFG_DEFAULTS = {
+        "BPP\t\t\t\t\t\t32", "FREQUENCY\t\t\t\t\t60", "SOFTWARE_CURSOR\t\t\t0", "OBJECT_CULLING\t\t\t\t1",
+        "VISIBILITY\t\t\t\t2", "MUSIC_VOLUME\t\t\t\t0.500", "VOICE_VOLUME\t\t\t\t3", "GAMMA\t\t\t\t\t\t3",
+        "SHADOW_LEVEL\t\t\t1", "USE_DEFAULT_IME\t\t0", "SHOW_RENDERTARGET\t\t0"
+    };
+
+    /** WIDTH/HEIGHT/WINDOWED/BPP satirlarini zorla; dosya yoksa mobil varsayilanlarla olustur. */
+    static synchronized boolean patchMetin2Cfg(File cfg, int w, int h) {
+        try {
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            if (cfg.isFile()) {
+                for (String l : new String(java.nio.file.Files.readAllBytes(cfg.toPath()), StandardCharsets.ISO_8859_1).split("\r?\n"))
+                    lines.add(l);
+            } else {
+                for (String d : CFG_DEFAULTS) lines.add(d);
+            }
+            boolean changed = !cfg.isFile();
+            String[][] want = {{"WIDTH", String.valueOf(w)}, {"HEIGHT", String.valueOf(h)}, {"WINDOWED", "0"}, {"BPP", "32"}};
+            for (String[] kv : want) {
+                boolean found = false;
+                for (int i = 0; i < lines.size(); i++) {
+                    String[] t = lines.get(i).trim().split("\\s+");
+                    if (t.length >= 1 && t[0].equalsIgnoreCase(kv[0])) {
+                        found = true;
+                        if (t.length < 2 || !t[1].equals(kv[1])) { lines.set(i, kv[0] + "\t\t\t\t\t\t" + kv[1]); changed = true; }
+                    }
+                }
+                if (!found) { lines.add(0, kv[0] + "\t\t\t\t\t\t" + kv[1]); changed = true; }
+            }
+            if (changed) {
+                StringBuilder sb = new StringBuilder();
+                for (String l : lines) if (!l.isEmpty()) sb.append(l).append("\r\n");
+                java.nio.file.Files.write(cfg.toPath(), sb.toString().getBytes(StandardCharsets.ISO_8859_1));
+                Log.i(TAG, "metin2.cfg ayarlandi: " + w + "x" + h);
+            }
+            return changed;
+        } catch (Exception e) {
+            Log.w(TAG, "metin2.cfg ayarlanamadi", e);
+            return false;
+        }
+    }
+
+    private static Thread cfgGuard;
+
+    /** Launcher indirme sirasinda metin2.cfg'yi degistirirse 15 dk boyunca geri duzelt. */
+    static synchronized void startCfgGuard(File cfg, int w, int h) {
+        if (cfgGuard != null) cfgGuard.interrupt();
+        cfgGuard = new Thread(() -> {
+            long end = System.currentTimeMillis() + 15 * 60 * 1000L;
+            long lastMod = cfg.lastModified();
+            while (System.currentTimeMillis() < end && !Thread.currentThread().isInterrupted()) {
+                try { Thread.sleep(700); } catch (InterruptedException e) { return; }
+                long m = cfg.lastModified();
+                if (m != lastMod) {
+                    patchMetin2Cfg(cfg, w, h);
+                    lastMod = cfg.lastModified();
+                }
+            }
+        }, "Andolan2CfgGuard");
+        cfgGuard.setDaemon(true);
+        cfgGuard.start();
     }
 
     private static final class FileUtilsCompat {

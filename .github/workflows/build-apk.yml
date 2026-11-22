@@ -91,14 +91,6 @@ jobs:
           cp app/build/outputs/apk/debug/*.apk "../out/Andolan2-v$VER.apk"
           ls -la ../out
 
-      - name: APK'yi yukle
-        uses: actions/upload-artifact@v4
-        with:
-          name: Andolan2-v${{ env.VER }}
-          path: out/*.apk
-          compression-level: 0
-          retention-days: 30
-
       - name: Surum olarak yayinla
         env:
           GH_TOKEN: ${{ github.token }}

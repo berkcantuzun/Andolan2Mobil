@@ -12,6 +12,9 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.SweepGradient;
 import android.graphics.Typeface;
+import android.os.Build;
+import android.view.DisplayCutout;
+import android.view.WindowInsets;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -58,11 +61,26 @@ public final class Andolan2Panel {
     private GameButton rightModeButton;
     private View rightClickCatcher;
     private boolean rightMode = false;
+    private boolean ready = false;   // oyun penceresi acilana kadar kontroller gizli
+    private static java.lang.ref.WeakReference<Andolan2Panel> current;
+
+    /** Oyun penceresi acildiginda / yukleme ekrani kapandiginda cagrilir. */
+    public static void reveal() {
+        Andolan2Panel p = current != null ? current.get() : null;
+        if (p == null) return;
+        p.root.post(() -> {
+            if (p.ready) return;
+            p.ready = true;
+            p.toggleButton.setVisibility(View.VISIBLE);
+            p.setVisible(p.prefs.getBoolean(PREF_VISIBLE, true));
+        });
+    }
 
     public static Andolan2Panel attach(AppCompatActivity activity, FrameLayout root, XServer xServer,
                                        TouchpadView touchpadView, InputControlsView inputControlsView) {
         Andolan2Panel p = new Andolan2Panel(activity, root, xServer, touchpadView);
         p.build();
+        current = new java.lang.ref.WeakReference<>(p);
         return p;
     }
 
@@ -174,10 +192,42 @@ public final class Andolan2Panel {
         tlp.topMargin = dp(4);
         root.addView(toggleButton, tlp);
 
-        setVisible(prefs.getBoolean(PREF_VISIBLE, true));
+        // Oyun penceresi gelene kadar hicbir kontrol gorunmesin
+        layer.setVisibility(View.GONE);
+        toggleButton.setVisibility(View.GONE);
+        root.postDelayed(Andolan2Panel::reveal, 90_000); // yedek: ne olursa olsun 90 sn sonra goster
+
+        // Guvenli alan: kamera centigi / yuvarlak koseler
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            applySafeArea(insets);
+            return insets;
+        });
+        root.post(() -> {
+            WindowInsets wi = root.getRootWindowInsets();
+            if (wi != null) applySafeArea(wi);
+        });
+    }
+
+    private void applySafeArea(WindowInsets insets) {
+        int base = dp(10);                       // yuvarlak koseler icin her zaman biraz pay
+        int l = base, t = dp(2), r = base, b = dp(4);
+        if (Build.VERSION.SDK_INT >= 28) {
+            DisplayCutout dc = insets.getDisplayCutout();
+            if (dc != null) {
+                l += dc.getSafeInsetLeft();
+                t += dc.getSafeInsetTop();
+                r += dc.getSafeInsetRight();
+                b += dc.getSafeInsetBottom();
+            }
+        }
+        layer.setPadding(l, t, r, b);
+        FrameLayout.LayoutParams tlp = (FrameLayout.LayoutParams) toggleButton.getLayoutParams();
+        tlp.topMargin = dp(4) + t;
+        toggleButton.setLayoutParams(tlp);
     }
 
     private void setVisible(boolean visible) {
+        if (!ready) return;
         layer.setVisibility(visible ? View.VISIBLE : View.GONE);
         toggleButton.setActive(!visible);
         if (!visible && rightMode) toggleRightMode();
