@@ -38,6 +38,7 @@ public final class Andolan2Bootstrap {
     public static final String GAME_DIR_WIN = "C:\\Andolan2";
     public static final String LAUNCHER_EXE = "Andolan2Launcher.exe";
     public static final int CONTROLS_PROFILE_ID = 4;
+    private static final String LAUNCHER_CFG = "url=https://cdn.andolan2.com/\r\nexe=Andolan2Client.exe\r\n";
 
     private static final String ASSET_LAUNCHER = "andolan2/" + LAUNCHER_EXE;
     private static final String ASSET_PROFILE = "inputcontrols/profiles/controls-" + CONTROLS_PROFILE_ID + ".icp";
@@ -101,6 +102,13 @@ public final class Andolan2Bootstrap {
         if (!gameDir.isDirectory()) gameDir.mkdirs();
         File launcher = new File(gameDir, LAUNCHER_EXE);
         if (!launcher.isFile() || launcher.length() == 0) copyAsset(activity.getAssets(), ASSET_LAUNCHER, launcher);
+        // Launcher yaninda launcher.cfg olmadan calismiyor ("launcher.cfg bulunamadi veya url satiri yok")
+        File cfg = new File(gameDir, "launcher.cfg");
+        if (!cfg.isFile() || !FileUtilsCompat.contains(cfg, "url=")) {
+            try (OutputStream out = new FileOutputStream(cfg)) {
+                out.write(LAUNCHER_CFG.getBytes(StandardCharsets.UTF_8));
+            }
+        }
 
         File shortcut = writeShortcut(container);
         final int containerId = container.id;
@@ -198,6 +206,7 @@ public final class Andolan2Bootstrap {
             "\n" +
             "[Extra Data]\n" +
             "controlsProfile=" + CONTROLS_PROFILE_ID + "\n" +
+            "envVars=WINEDEBUG=err+all,fixme-all\n" +
             "lc_all=tr_TR.UTF-8\n";
         try (OutputStream out = new FileOutputStream(file)) {
             out.write(content.getBytes(StandardCharsets.UTF_8));
@@ -231,6 +240,15 @@ public final class Andolan2Bootstrap {
             byte[] buf = new byte[64 * 1024];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        }
+    }
+
+    private static final class FileUtilsCompat {
+        static boolean contains(File f, String needle) {
+            try {
+                byte[] b = java.nio.file.Files.readAllBytes(f.toPath());
+                return new String(b, StandardCharsets.UTF_8).contains(needle);
+            } catch (Exception e) { return false; }
         }
     }
 }

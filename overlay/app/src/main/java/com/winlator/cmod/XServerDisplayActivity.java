@@ -511,6 +511,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             LogView.setFilename(getExecutable());
             ProcessHelper.addDebugCallback(debugDialog = new DebugDialog(this));
         }
+        com.winlator.cmod.andolan.Andolan2Diag.attach(this); // Andolan2: Wine ciktisini kaydet
 
         // Retrieve secondary executable and delay
         String secondaryExec = shortcut != null ? shortcut.getExtra("secondaryExec") : null;

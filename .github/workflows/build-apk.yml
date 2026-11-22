@@ -78,29 +78,34 @@ jobs:
       - name: Derle
         working-directory: winlator
         run: |
+          VER="1.0.${{ github.run_number }}"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          sed -i -E "s/versionCode [0-9]+/versionCode $((100 + ${{ github.run_number }}))/" app/build.gradle
+          sed -i -E "s/versionName \"[^\"]*\"/versionName \"$VER\"/" app/build.gradle
+          grep -E "versionCode|versionName" app/build.gradle
           sed -i 's/-Xmx8192m/-Xmx4096m/' gradle.properties
           sed -i 's/^org.gradle.configuration-cache=true/org.gradle.configuration-cache=false/' gradle.properties
           chmod +x gradlew
           ./gradlew --no-daemon --stacktrace assembleDebug
           mkdir -p ../out
-          cp app/build/outputs/apk/debug/*.apk ../out/Andolan2.apk
+          cp app/build/outputs/apk/debug/*.apk "../out/Andolan2-v$VER.apk"
           ls -la ../out
 
       - name: APK'yi yukle
         uses: actions/upload-artifact@v4
         with:
-          name: Andolan2-APK
-          path: out/Andolan2.apk
+          name: Andolan2-v${{ env.VER }}
+          path: out/*.apk
           compression-level: 0
           retention-days: 30
 
-      - name: Sabit linke yayinla (telefondan direkt indirme)
+      - name: Surum olarak yayinla
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest out/Andolan2.apk \
-            --title "Andolan2 (son surum)" \
-            --notes "Otomatik derleme: ${GITHUB_SHA::7} - $(date -u '+%Y-%m-%d %H:%M') UTC" \
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true   # eski sabit-adli yayin
+          gh release create "v$VER" "out/Andolan2-v$VER.apk" \
+            --title "Andolan2 v$VER" \
+            --notes "$(git -C andolan2 log -1 --format=%s) (${GITHUB_SHA::7})" \
             --target "$GITHUB_SHA" --latest

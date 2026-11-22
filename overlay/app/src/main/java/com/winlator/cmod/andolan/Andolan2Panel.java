@@ -169,6 +169,7 @@ public final class Andolan2Panel {
         // ---------------- ust orta: gizle/goster ----------------
         toggleButton = new GameButton(activity, GameButton.STYLE_PILL, null, GameButton.ICON_EYE);
         toggleButton.setOnClickListener(v -> setVisible(layer.getVisibility() != View.VISIBLE));
+        toggleButton.setOnLongClickListener(v -> { Andolan2Diag.share(activity); return true; }); // uzun bas: Wine kaydini paylas
         FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(dp(54), dp(28), Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         tlp.topMargin = dp(4);
         root.addView(toggleButton, tlp);

@@ -146,7 +146,9 @@ public class Andolan2SplashActivity extends AppCompatActivity {
             FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
 
         TextView footer = new TextView(this);
-        footer.setText("İlk açılışta kurulum birkaç dakika sürebilir");
+        String ver = "";
+        try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) {}
+        footer.setText("v" + ver + "  •  İlk açılışta kurulum birkaç dakika sürebilir");
         footer.setTextColor(Color.parseColor("#7A6A55"));
         footer.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         FrameLayout.LayoutParams flp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
